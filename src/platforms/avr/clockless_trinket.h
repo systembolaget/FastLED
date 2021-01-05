@@ -336,7 +336,9 @@ protected:
 	// This method is made static to force making register Y available to use for data on AVR - if the method is non-static, then
 	// gcc will use register Y for the this pointer.
 	static void /*__attribute__((optimize("O0")))*/  /*__attribute__ ((always_inline))*/  showRGBInternal(PixelController<RGB_ORDER> & pixels)  {
-		uint8_t *data = (uint8_t*)pixels.mData;
+		static uint16_t data_offset[60] = { 0, 3, 6, 9, 12, 15, 18, 21, 24, 27, 0, 3, 6, 9, 12, 15, 18, 21, 24, 27,0, 3, 6, 9, 12, 15, 18, 21, 24, 27,0, 3, 6, 9, 12, 15, 18, 21, 24, 27,0, 3, 6, 9, 12, 15, 18, 21, 24, 27,0, 3, 6, 9, 12, 15, 18, 21, 24, 27 };
+		uint8_t *data_base = (uint8_t*)pixels.mData;
+		uint8_t *data = data_base;
 		data_ptr_t port = FastPin<DATA_PIN>::port();
 		data_t mask = FastPin<DATA_PIN>::mask();
 		uint8_t scale_base = 0;
@@ -457,6 +459,7 @@ protected:
 					case 1: _D2(0) LO1 sei(); _D3(0) cli(); HI1 _D1(1) QLO2(b0,0)
 				}
 				MOV_ADDDE04(b0,b1,d0,e0) _D2(4) LO1 sei(); _D3(5)
+				data = data_base + data_offset[count];
 				ENDLOOP5
 			}
 			DONE;
