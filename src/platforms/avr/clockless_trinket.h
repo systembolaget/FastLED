@@ -336,7 +336,9 @@ protected:
 	// This method is made static to force making register Y available to use for data on AVR - if the method is non-static, then
 	// gcc will use register Y for the this pointer.
 	static void /*__attribute__((optimize("O0")))*/  /*__attribute__ ((always_inline))*/  showRGBInternal(PixelController<RGB_ORDER> & pixels)  {
-		static uint16_t data_offset[60] = { 0, 3, 6, 9, 12, 15, 18, 21, 24, 27, 0, 3, 6, 9, 12, 15, 18, 21, 24, 27,0, 3, 6, 9, 12, 15, 18, 21, 24, 27,0, 3, 6, 9, 12, 15, 18, 21, 24, 27,0, 3, 6, 9, 12, 15, 18, 21, 24, 27,0, 3, 6, 9, 12, 15, 18, 21, 24, 27 };
+		static uint16_t data_offset[60] = { 0*3, 1*3, 2*3, 3*3, 4*3, 5*3, 6*3, 7*3, 8*3, 9*3, 10*3, 11*3, 12*3, 13*3, 14*3, 15*3, 16*3, 17*3, 18*3, 19*3, 20*3, 21*3, 22*3, 23*3, 24*3, 25*3, 26*3, 27*3, 28*3, 29*3, 29*3, 28*3, 27*3, 26*3, 25*3, 24*3, 23*3, 22*3, 21*3, 20*3, 19*3, 18*3, 17*3, 16*3, 15*3, 14*3, 13*3, 12*3, 11*3, 10*3, 9*3, 8*3, 7*3, 6*3, 5*3, 4*3, 3*3, 2*3, 1*3, 0*3 };
+		//static uint16_t data_offset[60] = { 0*3, 1*3, 2*3, 3*3, 4*3, 5*3, 6*3, 7*3, 8*3, 9*3, 10*3, 11*3, 12*3, 13*3, 14*3, 15*3, 16*3, 17*3, 18*3, 19*3, 20*3, 21*3, 22*3, 23*3, 24*3, 25*3, 26*3, 27*3, 28*3, 29*3, 30*3, 31*3, 32*3, 33*3, 34*3, 35*3, 36*3, 37*3, 38*3, 39*3, 40*3, 41*3, 42*3, 43*3, 44*3, 45*3, 46*3, 47*3, 48*3, 49*3, 50*3, 51*3, 52*3, 53*3, 54*3, 55*3, 56*3, 57*3, 58*3, 59*3 };
+		//static uint16_t data_offset[60] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59 };
 		uint8_t *data_base = (uint8_t*)pixels.mData;
 		uint8_t *data = data_base;
 		data_ptr_t port = FastPin<DATA_PIN>::port();
@@ -359,6 +361,8 @@ protected:
 		// pull the dithering/adjustment values out of the pixels object for direct asm access
 		uint8_t advanceBy = pixels.advanceBy();
 		uint16_t count = pixels.mLen;
+
+		data = data_base + data_offset[count-1];
 
 		uint8_t s0 = pixels.mScale.raw[RO(0)];
 		uint8_t s1 = pixels.mScale.raw[RO(1)];
@@ -424,9 +428,8 @@ protected:
 				}
 				MOV_ADDDE14(b0,b1,d1,e1) _D2(4) LO1 sei(); _D3(0) 
 				
-
 				cli(); HI1 _D1(1) QLO2(b0, 7) LDSCL4(b1,O2) 	_D2(4)	LO1	sei();	PRESCALEA2(d2)	_D3(2)
-				cli(); HI1 _D1(1) QLO2(b0, 6) PSBIDATA4(d2)		_D2(4)	LO1	sei();	SCALE22(b1,0)	_D3(2)
+				cli(); HI1 _D1(1) QLO2(b0, 6) PRESCALEB4(d2)	_D2(4)	LO1	sei();	data = data_base + data_offset[count]; SCALE22(b1,0)
 				cli(); HI1 _D1(1) QLO2(b0, 5) RORSC24(b1,1) 	_D2(4)	LO1 sei();	RORCLC2(b1) 	_D3(2)
 				cli(); HI1 _D1(1) QLO2(b0, 4) SCROR24(b1,2)		_D2(4)	LO1 sei();	SCALE22(b1,3)	_D3(2)
 				cli(); HI1 _D1(1) QLO2(b0, 3) RORSC24(b1,4) 	_D2(4)	LO1 sei();	RORCLC2(b1) 	_D3(2)
@@ -459,7 +462,6 @@ protected:
 					case 1: _D2(0) LO1 sei(); _D3(0) cli(); HI1 _D1(1) QLO2(b0,0)
 				}
 				MOV_ADDDE04(b0,b1,d0,e0) _D2(4) LO1 sei(); _D3(5)
-				data = data_base + data_offset[count];
 				ENDLOOP5
 			}
 			DONE;
