@@ -180,7 +180,6 @@ protected:
 // The variables that our various asm statements use.  The same block of variables needs to be declared for
 // all the asm blocks because GCC is pretty stupid and it would clobber variables happily or optimize code away too aggressively
 #define ASM_VARS : /* write variables */				\
-				[data_offset_index] "+x" (data_offset_index),		\
 				[count] "+y" (count),					\
 				[data] "+z" (data),						\
 				[b1] "+a" (b1),							\
@@ -194,13 +193,13 @@ protected:
 				[b0] "a" (b0),							\
 				[hi] "r" (hi),							\
 				[lo] "r" (lo),							\
-				[s0] "r" (s0),					  		\
+				[s0] "r" (s0),							\
 				[s1] "r" (s1),							\
 				[s2] "r" (s2),							\
 				[e0] "r" (e0),							\
 				[e1] "r" (e1),							\
 				[e2] "r" (e2),							\
-				[PORT] ASM_VAR_PORT                    \
+				[PORT] ASM_VAR_PORT						\
 				: "cc" /* clobber registers */
 // Note: the code in the else in HI1/LO1 will be turned into an sts (2 cycle, 2 word) opcode
 // 1 cycle, write hi to the port
@@ -211,10 +210,20 @@ protected:
 // 2 cycles, sbrs on flipping the line to lo if we're pushing out a 0
 #define QLO2(B, N) asm __volatile__("sbrs %[" #B "], " #N ASM_VARS ); LO1;
 
-// load a byte from ram into the given var with the given offset
-#define LD2(B,O) (asm __volatile__("ldd %[" #B "], Z + " O "\n\t" ASM_VARS );)
-// 4 cycles - load a byte from ram into the scaling scratch space with the given offset, clear the target var, clear carry
-#define LDSCL4(B,O) asm __volatile__("ldd %[scale_base], Z + " O "\n\tclr %[" #B "]\n\tclc\n\t" ASM_VARS );
+#define LDSCL4(B,O) /*
+*/; if(O==0) { asm __volatile__("ldd %[scale_base], Z + 0\n\tclr %[" #B "]\n\tclc\n\t" ASM_VARS ); }/*
+*/; if(O==1) { asm __volatile__("ldd %[scale_base], Z + 1\n\tclr %[" #B "]\n\tclc\n\t" ASM_VARS ); }/*
+*/; if(O==2) { asm __volatile__("ldd %[scale_base], Z + 2\n\tclr %[" #B "]\n\tclc\n\t" ASM_VARS ); }
+
+// // load a byte from ram into the given var with the given offset
+#define LD2(B,O) /*
+*/; if(O==0) { asm __volatile__("ldd %[" #B "], Z + 0\n\t" ASM_VARS );/*
+*/; if(O==1) { asm __volatile__("ldd %[" #B "], Z + 1\n\t" ASM_VARS );/*
+*/; if(O==2) { asm __volatile__("ldd %[" #B "], Z + 2\n\t" ASM_VARS );
+
+
+// // 4 cycles - load a byte from ram into the scaling scratch space with the given offset, clear the target var, clear carry
+// #define LDSCL4(B,O) asm __volatile__("ldd %[scale_base], Z + %[" #O "]\n\tclr %[" #B "]\n\tclc\n\t" ASM_VARS );
 
 #if (DITHER==1)
 // apply dithering value  before we do anything with scale_base
@@ -383,37 +392,10 @@ protected:
 
 		uint8_t loopvar=0;
 
-		// expand these to strings, so that we don't have to use up 3 of our maximum 30 asm vars
-		#if RGB_ORDER == RGB
-			#define o0 "0"
-			#define o1 "1"
-			#define o2 "2"
-		#elif RGB_ORDER == RBG
-			#define o0 "0"
-			#define o1 "2"
-			#define o2 "1"
-		#elif RGB_ORDER == GRB
-			#define o0 "1"
-			#define o1 "0"
-			#define o2 "2"
-		#elif RGB_ORDER == GBR
-			#define o0 "1"
-			#define o1 "2"
-			#define o2 "0"
-		#elif RGB_ORDER == BRG
-			#define o0 "2"
-			#define o1 "0"
-			#define o2 "1"
-		#elif RGB_ORDER == BGR
-			#define o0 "2"
-			#define o1 "1"
-			#define o2 "0"
-		#endif
-
 		// This has to be done in asm to keep gcc from messing up the asm code further down
 		b0 = data[RO(0)];
 		{
-			LDSCL4(b0,o0) 	PRESCALEA2(d0)
+			LDSCL4(b0,RGB_BYTE0(RGB_ORDER)) 	PRESCALEA2(d0)
 			PRESCALEB4(d0)	SCALE02(b0,0)
 			RORSC04(b0,1) 	ROR1(b0) CLC1
 			SCROR04(b0,2)		SCALE02(b0,3)
@@ -442,14 +424,14 @@ protected:
 
 				// Inline scaling - RGB ordering
 				// DNOP
-				
-				cli(); HI1 _D1(1) QLO2(b0, 7) LDSCL4(b1,o1) 	_D2(4)	LO1	sei();	PRESCALEA2(d1)	_D3(4) 
-				cli(); HI1 _D1(1) QLO2(b0, 6) PRESCALEB4(d1)	_D2(4)	LO1	sei();	SCALE12(b1,0)	_D3(4) 
-				cli(); HI1 _D1(1) QLO2(b0, 5) RORSC14(b1,1) 	_D2(4)	LO1 sei();	RORCLC2(b1)		_D3(4) 
-				cli(); HI1 _D1(1) QLO2(b0, 4) SCROR14(b1,2)		_D2(4)	LO1 sei();	SCALE12(b1,3)	_D3(4) 
-				cli(); HI1 _D1(1) QLO2(b0, 3) RORSC14(b1,4) 	_D2(4)	LO1 sei();	RORCLC2(b1) 	_D3(4) 
-				cli(); HI1 _D1(1) QLO2(b0, 2) SCROR14(b1,5) 	_D2(4)	LO1 sei();	SCALE12(b1,6)	_D3(4) 
-				cli(); HI1 _D1(1) QLO2(b0, 1) RORSC14(b1,7) 	_D2(4)	LO1 sei();	RORCLC2(b1) 	_D3(4) 
+
+				cli(); HI1 _D1(1) QLO2(b0, 7) LDSCL4(b1,RGB_BYTE1(RGB_ORDER)) 	_D2(4)	LO1	sei();	PRESCALEA2(d1)	_D3(4)
+				cli(); HI1 _D1(1) QLO2(b0, 6) PRESCALEB4(d1)	_D2(4)	LO1	sei();	SCALE12(b1,0)	_D3(4)
+				cli(); HI1 _D1(1) QLO2(b0, 5) RORSC14(b1,1) 	_D2(4)	LO1 sei();	RORCLC2(b1)		_D3(4)
+				cli(); HI1 _D1(1) QLO2(b0, 4) SCROR14(b1,2)		_D2(4)	LO1 sei();	SCALE12(b1,3)	_D3(4)
+				cli(); HI1 _D1(1) QLO2(b0, 3) RORSC14(b1,4) 	_D2(4)	LO1 sei();	RORCLC2(b1) 	_D3(4)
+				cli(); HI1 _D1(1) QLO2(b0, 2) SCROR14(b1,5) 	_D2(4)	LO1 sei();	SCALE12(b1,6)	_D3(4)
+				cli(); HI1 _D1(1) QLO2(b0, 1) RORSC14(b1,7) 	_D2(4)	LO1 sei();	RORCLC2(b1) 	_D3(4)
 				cli(); HI1 _D1(1) QLO2(b0, 0)
 				switch(XTRA0) {
 					case 4: _D2(0) LO1 sei(); _D3(0) cli(); HI1 _D1(1) QLO2(b0,0)  /* fall through */
@@ -457,11 +439,11 @@ protected:
 					case 2: _D2(0) LO1 sei(); _D3(0) cli(); HI1 _D1(1) QLO2(b0,0)  /* fall through */
 					case 1: _D2(0) LO1 sei(); _D3(0) cli(); HI1 _D1(1) QLO2(b0,0)
 				}
-				MOV_ADDDE14(b0,b1,d1,e1) _D2(4) LO1 sei(); _D3(1) 
-				
-				cli(); HI1 _D1(1) QLO2(b0, 7) LDSCL4(b1,o2) 	_D2(4)	LO1	sei();	PRESCALEA2(d2)	_D3(4)
-				cli(); HI1 _D1(1) QLO2(b0, 6) PRESCALEB4(d2)	SCALE22(b1,0) _D2(8) LO1 sei();	
-				data = data_base + (data_offset[count]*advanceBy); 
+				MOV_ADDDE14(b0,b1,d1,e1) _D2(4) LO1 sei(); _D3(1)
+
+				cli(); HI1 _D1(1) QLO2(b0, 7) LDSCL4(b1,RGB_BYTE2(RGB_ORDER)) 	_D2(4)	LO1	sei();	PRESCALEA2(d2)	_D3(4)
+				cli(); HI1 _D1(1) QLO2(b0, 6) PRESCALEB4(d2)	SCALE22(b1,0) _D2(8) LO1 sei();
+				data = data_base + (data_offset[count]*advanceBy);
 				_D3(4)
 				cli(); HI1 _D1(1) QLO2(b0, 5) RORSC24(b1,1) 	_D2(4)	LO1 sei();	RORCLC2(b1) 	_D3(4)
 				cli(); HI1 _D1(1) QLO2(b0, 4) SCROR24(b1,2)		_D2(4)	LO1 sei();	SCALE22(b1,3)	_D3(4)
@@ -480,7 +462,7 @@ protected:
 				// we have to do both halves of updating d2 here - negating it (in the
 				// MOV_NEGD24 macro) and then adding E back into it
 				MOV_NEGD24(b0,b1,d2) _D2(4) LO1 sei(); ADDDE1(d2,e2) _D3(2)
-				cli(); HI1 _D1(1) QLO2(b0, 7) LDSCL4(b1,o0) 	_D2(4)	LO1 sei();	PRESCALEA2(d0)	_D3(4)
+				cli(); HI1 _D1(1) QLO2(b0, 7) LDSCL4(b1,RGB_BYTE0(RGB_ORDER)) 	_D2(4)	LO1 sei();	PRESCALEA2(d0)	_D3(4)
 				cli(); HI1 _D1(1) QLO2(b0, 6) PRESCALEB4(d0)	_D2(4)	LO1 sei();	SCALE02(b1,0)	_D3(4)
 				cli(); HI1 _D1(1) QLO2(b0, 5) RORSC04(b1,1) 	_D2(4)	LO1 sei(); RORCLC2(b1) 	_D3(4)
 				cli(); HI1 _D1(1) QLO2(b0, 4) SCROR04(b1,2)		_D2(4)	LO1 sei(); SCALE02(b1,3)	_D3(4)
