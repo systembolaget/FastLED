@@ -180,7 +180,7 @@ protected:
 // The variables that our various asm statements use.  The same block of variables needs to be declared for
 // all the asm blocks because GCC is pretty stupid and it would clobber variables happily or optimize code away too aggressively
 #define ASM_VARS : /* write variables */				\
-				[data_offset_index] "+x" (data_offset_index), \
+				[data_offset] "+x" (data_offset), \
 				[count] "+y" (count),					\
 				[data] "+z" (data),						\
 				[b1] "+a" (b1),							\
@@ -345,19 +345,19 @@ protected:
 	// This method is made static to force making register Y available to use for data on AVR - if the method is non-static, then
 	// gcc will use register Y for the this pointer.
 	static void /*__attribute__((optimize("O0")))*/  /*__attribute__ ((always_inline))*/  showRGBInternal(PixelController<RGB_ORDER> & pixels)  {
-		static uint8_t data_offset[60] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0 };
-		//static uint8_t data_offset[60] = { 0*3, 1*3, 2*3, 3*3, 4*3, 5*3, 6*3, 7*3, 8*3, 9*3, 10*3, 11*3, 12*3, 13*3, 14*3, 15*3, 16*3, 17*3, 18*3, 19*3, 20*3, 21*3, 22*3, 23*3, 24*3, 25*3, 26*3, 27*3, 28*3, 29*3, 29*3, 28*3, 27*3, 26*3, 25*3, 24*3, 23*3, 22*3, 21*3, 20*3, 19*3, 18*3, 17*3, 16*3, 15*3, 14*3, 13*3, 12*3, 11*3, 10*3, 9*3, 8*3, 7*3, 6*3, 5*3, 4*3, 3*3, 2*3, 1*3, 0*3 };
-		//static uint16_t data_offset[60] = { 0*3, 1*3, 2*3, 3*3, 4*3, 5*3, 6*3, 7*3, 8*3, 9*3, 10*3, 11*3, 12*3, 13*3, 14*3, 15*3, 16*3, 17*3, 18*3, 19*3, 20*3, 21*3, 22*3, 23*3, 24*3, 25*3, 26*3, 27*3, 28*3, 29*3, 30*3, 31*3, 32*3, 33*3, 34*3, 35*3, 36*3, 37*3, 38*3, 39*3, 40*3, 41*3, 42*3, 43*3, 44*3, 45*3, 46*3, 47*3, 48*3, 49*3, 50*3, 51*3, 52*3, 53*3, 54*3, 55*3, 56*3, 57*3, 58*3, 59*3 };
-		// static uint8_t data_offset[60] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59 };
+		static uint8_t _data_offset[60] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0 };
+		//static uint8_t _data_offset[60] = { 0*3, 1*3, 2*3, 3*3, 4*3, 5*3, 6*3, 7*3, 8*3, 9*3, 10*3, 11*3, 12*3, 13*3, 14*3, 15*3, 16*3, 17*3, 18*3, 19*3, 20*3, 21*3, 22*3, 23*3, 24*3, 25*3, 26*3, 27*3, 28*3, 29*3, 29*3, 28*3, 27*3, 26*3, 25*3, 24*3, 23*3, 22*3, 21*3, 20*3, 19*3, 18*3, 17*3, 16*3, 15*3, 14*3, 13*3, 12*3, 11*3, 10*3, 9*3, 8*3, 7*3, 6*3, 5*3, 4*3, 3*3, 2*3, 1*3, 0*3 };
+		//static uint16_t _data_offset[60] = { 0*3, 1*3, 2*3, 3*3, 4*3, 5*3, 6*3, 7*3, 8*3, 9*3, 10*3, 11*3, 12*3, 13*3, 14*3, 15*3, 16*3, 17*3, 18*3, 19*3, 20*3, 21*3, 22*3, 23*3, 24*3, 25*3, 26*3, 27*3, 28*3, 29*3, 30*3, 31*3, 32*3, 33*3, 34*3, 35*3, 36*3, 37*3, 38*3, 39*3, 40*3, 41*3, 42*3, 43*3, 44*3, 45*3, 46*3, 47*3, 48*3, 49*3, 50*3, 51*3, 52*3, 53*3, 54*3, 55*3, 56*3, 57*3, 58*3, 59*3 };
+		// static uint8_t _data_offset[60] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59 };
 		uint8_t *data_base = (uint8_t*)pixels.mData;
-		uint8_t *data_offset_index = (uint8_t*)data_offset;
+		uint8_t *data_offset = (uint8_t*)_data_offset;
 		uint8_t *data = data_base;
 		data_ptr_t port = FastPin<DATA_PIN>::port();
 		data_t mask = FastPin<DATA_PIN>::mask();
 		uint8_t scale_base = 0;
 
 		uint8_t last_offset = 59;
-		uint8_t this_offset = 0;
+		uint8_t this_offset = data_offset[0];
 
 		// register uint8_t *end = data + nLeds;
 		data_t hi = *port | mask;
