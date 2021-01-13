@@ -180,7 +180,8 @@ protected:
 // The variables that our various asm statements use.  The same block of variables needs to be declared for
 // all the asm blocks because GCC is pretty stupid and it would clobber variables happily or optimize code away too aggressively
 #define ASM_VARS : /* write variables */				\
-				[count] "+x" (count),					\
+				[data_offset_index] "+x" (data_offset_index),		\
+				[count] "+y" (count),					\
 				[data] "+z" (data),						\
 				[b1] "+a" (b1),							\
 				[d0] "+r" (d0),							\
@@ -199,10 +200,7 @@ protected:
 				[e0] "r" (e0),							\
 				[e1] "r" (e1),							\
 				[e2] "r" (e2),							\
-				[PORT] ASM_VAR_PORT,                    \
-				[O0] "M" (RGB_BYTE0(RGB_ORDER)),		\
-				[O1] "M" (RGB_BYTE1(RGB_ORDER)),		\
-				[O2] "M" (RGB_BYTE2(RGB_ORDER))		\
+				[PORT] ASM_VAR_PORT                    \
 				: "cc" /* clobber registers */
 // Note: the code in the else in HI1/LO1 will be turned into an sts (2 cycle, 2 word) opcode
 // 1 cycle, write hi to the port
@@ -212,10 +210,11 @@ protected:
 
 // 2 cycles, sbrs on flipping the line to lo if we're pushing out a 0
 #define QLO2(B, N) asm __volatile__("sbrs %[" #B "], " #N ASM_VARS ); LO1;
+
 // load a byte from ram into the given var with the given offset
-#define LD2(B,O) asm __volatile__("ldd %[" #B "], Z + %[" #O "]\n\t" ASM_VARS );
+#define LD2(B,O) (asm __volatile__("ldd %[" #B "], Z + " O "\n\t" ASM_VARS );)
 // 4 cycles - load a byte from ram into the scaling scratch space with the given offset, clear the target var, clear carry
-#define LDSCL4(B,O) asm __volatile__("ldd %[scale_base], Z + %[" #O "]\n\tclr %[" #B "]\n\tclc\n\t" ASM_VARS );
+#define LDSCL4(B,O) asm __volatile__("ldd %[scale_base], Z + " O "\n\tclr %[" #B "]\n\tclc\n\t" ASM_VARS );
 
 #if (DITHER==1)
 // apply dithering value  before we do anything with scale_base
@@ -341,10 +340,14 @@ protected:
 		//static uint16_t data_offset[60] = { 0*3, 1*3, 2*3, 3*3, 4*3, 5*3, 6*3, 7*3, 8*3, 9*3, 10*3, 11*3, 12*3, 13*3, 14*3, 15*3, 16*3, 17*3, 18*3, 19*3, 20*3, 21*3, 22*3, 23*3, 24*3, 25*3, 26*3, 27*3, 28*3, 29*3, 30*3, 31*3, 32*3, 33*3, 34*3, 35*3, 36*3, 37*3, 38*3, 39*3, 40*3, 41*3, 42*3, 43*3, 44*3, 45*3, 46*3, 47*3, 48*3, 49*3, 50*3, 51*3, 52*3, 53*3, 54*3, 55*3, 56*3, 57*3, 58*3, 59*3 };
 		// static uint8_t data_offset[60] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59 };
 		uint8_t *data_base = (uint8_t*)pixels.mData;
+		uint8_t *data_offset_index = (uint8_t*)data_offset;
 		uint8_t *data = data_base;
 		data_ptr_t port = FastPin<DATA_PIN>::port();
 		data_t mask = FastPin<DATA_PIN>::mask();
 		uint8_t scale_base = 0;
+
+		uint8_t last_offset = 59;
+		uint8_t this_offset = 0;
 
 		// register uint8_t *end = data + nLeds;
 		data_t hi = *port | mask;
@@ -380,10 +383,37 @@ protected:
 
 		uint8_t loopvar=0;
 
+		// expand these to strings, so that we don't have to use up 3 of our maximum 30 asm vars
+		#if RGB_ORDER == RGB
+			#define o0 "0"
+			#define o1 "1"
+			#define o2 "2"
+		#elif RGB_ORDER == RBG
+			#define o0 "0"
+			#define o1 "2"
+			#define o2 "1"
+		#elif RGB_ORDER == GRB
+			#define o0 "1"
+			#define o1 "0"
+			#define o2 "2"
+		#elif RGB_ORDER == GBR
+			#define o0 "1"
+			#define o1 "2"
+			#define o2 "0"
+		#elif RGB_ORDER == BRG
+			#define o0 "2"
+			#define o1 "0"
+			#define o2 "1"
+		#elif RGB_ORDER == BGR
+			#define o0 "2"
+			#define o1 "1"
+			#define o2 "0"
+		#endif
+
 		// This has to be done in asm to keep gcc from messing up the asm code further down
 		b0 = data[RO(0)];
 		{
-			LDSCL4(b0,O0) 	PRESCALEA2(d0)
+			LDSCL4(b0,o0) 	PRESCALEA2(d0)
 			PRESCALEB4(d0)	SCALE02(b0,0)
 			RORSC04(b0,1) 	ROR1(b0) CLC1
 			SCROR04(b0,2)		SCALE02(b0,3)
@@ -413,7 +443,7 @@ protected:
 				// Inline scaling - RGB ordering
 				// DNOP
 				
-				cli(); HI1 _D1(1) QLO2(b0, 7) LDSCL4(b1,O1) 	_D2(4)	LO1	sei();	PRESCALEA2(d1)	_D3(4) 
+				cli(); HI1 _D1(1) QLO2(b0, 7) LDSCL4(b1,o1) 	_D2(4)	LO1	sei();	PRESCALEA2(d1)	_D3(4) 
 				cli(); HI1 _D1(1) QLO2(b0, 6) PRESCALEB4(d1)	_D2(4)	LO1	sei();	SCALE12(b1,0)	_D3(4) 
 				cli(); HI1 _D1(1) QLO2(b0, 5) RORSC14(b1,1) 	_D2(4)	LO1 sei();	RORCLC2(b1)		_D3(4) 
 				cli(); HI1 _D1(1) QLO2(b0, 4) SCROR14(b1,2)		_D2(4)	LO1 sei();	SCALE12(b1,3)	_D3(4) 
@@ -429,7 +459,7 @@ protected:
 				}
 				MOV_ADDDE14(b0,b1,d1,e1) _D2(4) LO1 sei(); _D3(1) 
 				
-				cli(); HI1 _D1(1) QLO2(b0, 7) LDSCL4(b1,O2) 	_D2(4)	LO1	sei();	PRESCALEA2(d2)	_D3(4)
+				cli(); HI1 _D1(1) QLO2(b0, 7) LDSCL4(b1,o2) 	_D2(4)	LO1	sei();	PRESCALEA2(d2)	_D3(4)
 				cli(); HI1 _D1(1) QLO2(b0, 6) PRESCALEB4(d2)	SCALE22(b1,0) _D2(8) LO1 sei();	
 				data = data_base + (data_offset[count]*advanceBy); 
 				_D3(4)
@@ -450,7 +480,7 @@ protected:
 				// we have to do both halves of updating d2 here - negating it (in the
 				// MOV_NEGD24 macro) and then adding E back into it
 				MOV_NEGD24(b0,b1,d2) _D2(4) LO1 sei(); ADDDE1(d2,e2) _D3(2)
-				cli(); HI1 _D1(1) QLO2(b0, 7) LDSCL4(b1,O0) 	_D2(4)	LO1 sei();	PRESCALEA2(d0)	_D3(4)
+				cli(); HI1 _D1(1) QLO2(b0, 7) LDSCL4(b1,o0) 	_D2(4)	LO1 sei();	PRESCALEA2(d0)	_D3(4)
 				cli(); HI1 _D1(1) QLO2(b0, 6) PRESCALEB4(d0)	_D2(4)	LO1 sei();	SCALE02(b1,0)	_D3(4)
 				cli(); HI1 _D1(1) QLO2(b0, 5) RORSC04(b1,1) 	_D2(4)	LO1 sei(); RORCLC2(b1) 	_D3(4)
 				cli(); HI1 _D1(1) QLO2(b0, 4) SCROR04(b1,2)		_D2(4)	LO1 sei(); SCALE02(b1,3)	_D3(4)
