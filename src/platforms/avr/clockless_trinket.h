@@ -180,6 +180,7 @@ protected:
 // The variables that our various asm statements use.  The same block of variables needs to be declared for
 // all the asm blocks because GCC is pretty stupid and it would clobber variables happily or optimize code away too aggressively
 #define ASM_VARS : /* write variables */				\
+				[data_offset_index] "+x" (data_offset_index), \
 				[count] "+y" (count),					\
 				[data] "+z" (data),						\
 				[b1] "+a" (b1),							\
