@@ -444,34 +444,105 @@ protected:
 					case 2: _D2(0) LO1 sei(); _D3(0) cli(); HI1 _D1(1) QLO2(b0,0)  /* fall through */
 					case 1: _D2(0) LO1 sei(); _D3(0) cli(); HI1 _D1(1) QLO2(b0,0)
 				}
-				MOV_ADDDE14(b0,b1,d1,e1) _D2(4) LO1 sei(); _D3(1)
 
-				cli(); HI1 _D1(1) QLO2(b0, 7) LDSCL4(b1,RGB_BYTE2(RGB_ORDER)) 	_D2(4)	LO1	sei();	PRESCALEA2(d2)	_D3(4)
-				cli(); HI1 _D1(1) QLO2(b0, 6) PRESCALEB4(d2)	SCALE22(b1,0) _D2(8) LO1 sei();
-				//data = data_base + (data_offset[count]*advanceBy);
+				MOV_ADDDE14(b0,b1,d1,e1) 
+
 				asm __volatile__(
 					"\tld %[this_offset], X+\n"
-					"\tsbrc %[this_offset], 7\n"
-					"\trjmp neg\n"
-					"pos:\n"
-					"\tadd %A[data], %[this_offset]\n"
-					"\tadc %B[data], __zero_reg__\n"
-					"\tlsl %[this_offset]\n"
-					"\tadd %A[data], %[this_offset]\n"
-					"\tadc %B[data], __zero_reg__\n"
-					"\trjmp end\n"
+					ASM_VARS
+				);
+
+
+				_D2(5) LO1 sei(); 
+
+
+
+				// ** offsets ** //
+				// offsets can be either positive or negative. The code to multiply the offset by 3 (as in, 3 bytes for RGB)
+				// takes 8 cycles, but it's 2 different branches. As there are no gaps with 8 spare cycles, in order to keep
+				// the timings tight, we'll have to make two copies of the next few lines and weave one branch through each.
+
+				// _D1(1) has 2 spare cycles
+				// LDSCL4 reads from Z, so any Z adjustments cant come before then.
+				// LDSCL4 does clc - but does it really need to if we're about to override it anyway?
+				// _D2(4) has 5 spare cycles (6 without clc?)
+				// _D3(4) has 1 spare cycle
+
+				asm __volatile__(
+					"\tsbrs %[this_offset], 7\n"
+					"\trjmp pos\n"
 					"neg:\n"
 					"\tneg %[this_offset]\n"
+					ASM_VARS
+				);
+
+				_D3(5) // one each for sei, cli, sbrc, rjmp, neg and 0 cycles to spare.
+
+				cli(); // does not affect SREG
+				HI1    // does not affect SREG
+
+				_D1(3) // _D1(1) has 2 spare cycles
+				QLO2(b0, 7) 
+				LDSCL4(b1,RGB_BYTE2(RGB_ORDER))
+
+				asm __volatile__(
 					"\tsub %A[data], %[this_offset]\n"
 					"\tsbc %B[data], __zero_reg__\n"
 					"\tlsl %[this_offset]\n"
 					"\tsub %A[data], %[this_offset]\n"
 					"\tsbc %B[data], __zero_reg__\n"
+					ASM_VARS
+				);
+
+
+				// 9 because of the rjmp
+				_D2(9)	// _D2(4) has 5 spare cycles (6 without clc?)
+
+				asm __volatile__(
+					"\rjmp end\n"
+					"pos:\n"
+					ASM_VARS
+				);
+
+				_D3(5) // one each for sei, cli, sbrc, rjmp x2 and 0 cycles to spare.
+
+				cli(); // does not affect SREG
+				HI1    // does not affect SREG
+
+				_D1(3) // _D1(1) has 2 spare cycles
+				QLO2(b0, 7)
+				LDSCL4(b1,RGB_BYTE2(RGB_ORDER))
+
+				asm __volatile__(
+					"\tadd %A[data], %[this_offset]\n"
+					"\tadc %B[data], __zero_reg__\n"
+					"\tlsl %[this_offset]\n"
+					"\tadd %A[data], %[this_offset]\n"
+					"\tadc %B[data], __zero_reg__\n"
+					ASM_VARS
+				);
+
+				// 7 because no rjmp
+				_D2(7) // _D2(4) has 5 spare cycles (6 without clc?)
+
+				asm __volatile__(
 					"end:\n"
 					ASM_VARS
 				);
 
+				LO1
+				sei();
+				PRESCALEA2(d2)
+
 				_D3(4)
+
+				// _D1(1) has 2 spare cycles (can be used to load next offset)
+				// _D2(4) has 5 spare cycles
+				// _D3(4) has 1 spare cycle
+				cli(); HI1 _D1(1) QLO2(b0, 6) PRESCALEB4(d2) _D2(4)	LO1 sei(); SCALE22(b1,0) _D3(4) 
+
+				//data = data_base + (data_offset[count]*advanceBy);
+
 				cli(); HI1 _D1(1) QLO2(b0, 5) RORSC24(b1,1) 	_D2(4)	LO1 sei();	RORCLC2(b1) 	_D3(4)
 				cli(); HI1 _D1(1) QLO2(b0, 4) SCROR24(b1,2)		_D2(4)	LO1 sei();	SCALE22(b1,3)	_D3(4)
 				cli(); HI1 _D1(1) QLO2(b0, 3) RORSC24(b1,4) 	_D2(4)	LO1 sei();	RORCLC2(b1) 	_D3(4)
