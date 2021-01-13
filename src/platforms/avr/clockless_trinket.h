@@ -211,6 +211,8 @@ protected:
 // 2 cycles, sbrs on flipping the line to lo if we're pushing out a 0
 #define QLO2(B, N) asm __volatile__("sbrs %[" #B "], " #N ASM_VARS ); LO1;
 
+// implementation of LDSCL4() which doesn't use unnecessary ASM vars (so we can use them for something else)
+// however, for performance, we rely on the compiler optimising away the two out of three cases which don't apply. don't compile with -O0 ...
 #define LDSCL4(B,O) /*
 */; if(O==0) { asm __volatile__("ldd %[scale_base], Z + 0\n\tclr %[" #B "]\n\tclc\n\t" ASM_VARS ); }/*
 */; if(O==1) { asm __volatile__("ldd %[scale_base], Z + 1\n\tclr %[" #B "]\n\tclc\n\t" ASM_VARS ); }/*
