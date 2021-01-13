@@ -187,7 +187,7 @@ protected:
 				[d0] "+r" (d0),							\
 				[d1] "+r" (d1),							\
 				[d2] "+r" (d2),							\
-				[loopvar] "+a" (loopvar),				\
+				[this_offset] "+r" (this_offset),	    \
 				[scale_base] "+a" (scale_base)			\
 				: /* use variables */					\
 				[ADV] "r" (advanceBy),					\
