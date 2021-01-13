@@ -451,8 +451,15 @@ protected:
 				//data = data_base + (data_offset[count]*advanceBy);
 				asm __volatile__(
 					"\tld %[this_offset], X+\n"
-					"\tsbrs %[this_offset], 7\n"
-					"\trjmp pos\n"
+					"\tsbrc %[this_offset], 7\n"
+					"\trjmp neg\n"
+					"pos:\n"
+					"\tadd %A[data], %[this_offset]\n"
+					"\tadc %B[data], __zero_reg__\n"
+					"\tlsl %[this_offset]\n"
+					"\tadd %A[data], %[this_offset]\n"
+					"\tadc %B[data], __zero_reg__\n"
+					"\trjmp end\n"
 					"neg:\n"
 					"\tneg %[this_offset]\n"
 					"\tsub %A[data], %[this_offset]\n"
@@ -460,13 +467,6 @@ protected:
 					"\tlsl %[this_offset]\n"
 					"\tsub %A[data], %[this_offset]\n"
 					"\tsbc %B[data], __zero_reg__\n"
-					"\trjmp end\n"
-					"pos:\n"
-					"\tadd %A[data], %[this_offset]\n"
-					"\tadc %B[data], __zero_reg__\n"
-					"\tlsl %[this_offset]\n"
-					"\tadd %A[data], %[this_offset]\n"
-					"\tadc %B[data], __zero_reg__\n"
 					"end:\n"
 					ASM_VARS
 				);
