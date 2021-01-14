@@ -180,7 +180,7 @@ protected:
 // The variables that our various asm statements use.  The same block of variables needs to be declared for
 // all the asm blocks because GCC is pretty stupid and it would clobber variables happily or optimize code away too aggressively
 #define ASM_VARS : /* write variables */				\
-				[data_offset] "+x" (data_offset), \
+				[data_offset] "+x" (data_offset), 		\
 				[count] "+y" (count),					\
 				[data] "+z" (data),						\
 				[b1] "+a" (b1),							\
@@ -190,7 +190,7 @@ protected:
 				[this_offset] "+r" (this_offset),	    \
 				[scale_base] "+a" (scale_base)			\
 				: /* use variables */					\
-				[ADV] "r" (advanceBy),					\
+				[offset_overflow] "r" (_data_offset + offset_count),		\
 				[b0] "a" (b0),							\
 				[hi] "r" (hi),							\
 				[lo] "r" (lo),							\
@@ -201,7 +201,10 @@ protected:
 				[e1] "r" (e1),							\
 				[e2] "r" (e2),							\
 				[PORT] ASM_VAR_PORT						\
-				: "cc" /* clobber registers */
+				: /* clobber registers */ \
+				"cc",  \
+				"r24", /* because we've run out of register names, we're going to use these manually to store a copy of the offset_base */ \
+				"r25" 
 // Note: the code in the else in HI1/LO1 will be turned into an sts (2 cycle, 2 word) opcode
 // 1 cycle, write hi to the port
 #define HI1 FASTLED_SLOW_CLOCK_ADJUST if((int)(FastPin<DATA_PIN>::port())-0x20 < 64) { asm __volatile__("out %[PORT], %[hi]" ASM_VARS ); } else { *FastPin<DATA_PIN>::port()=hi; }
@@ -347,7 +350,8 @@ protected:
 	// This method is made static to force making register Y available to use for data on AVR - if the method is non-static, then
 	// gcc will use register Y for the this pointer.
 	static void /*__attribute__((optimize("O0")))*/  /*__attribute__ ((always_inline))*/  showRGBInternal(PixelController<RGB_ORDER> & pixels)  {
-		static int8_t _data_offset[60] = { 2, -1, -1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 };
+		static int8_t _data_offset[60] = { 0, 1,1,1,1,1,1,1,1,1,1,49,-1,-1,-1,-1,-1,-1,-1,-1,-1,-30,1,1,1,1,1,1,1,1,1,19,-1,-1,-1,-1,-1,-1,-1,-1,-1,-10,1,1,1,1,1,1,1,1,1,10,-1,-1,-1,-1,-1,-1,-1,-1};
+		// static int8_t _data_offset[60] = { 2, -1, -1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 };
 		// static uint8_t _data_offset[60] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0 };
 		//static uint8_t _data_offset[60] = { 0*3, 1*3, 2*3, 3*3, 4*3, 5*3, 6*3, 7*3, 8*3, 9*3, 10*3, 11*3, 12*3, 13*3, 14*3, 15*3, 16*3, 17*3, 18*3, 19*3, 20*3, 21*3, 22*3, 23*3, 24*3, 25*3, 26*3, 27*3, 28*3, 29*3, 29*3, 28*3, 27*3, 26*3, 25*3, 24*3, 23*3, 22*3, 21*3, 20*3, 19*3, 18*3, 17*3, 16*3, 15*3, 14*3, 13*3, 12*3, 11*3, 10*3, 9*3, 8*3, 7*3, 6*3, 5*3, 4*3, 3*3, 2*3, 1*3, 0*3 };
 		//static uint16_t _data_offset[60] = { 0*3, 1*3, 2*3, 3*3, 4*3, 5*3, 6*3, 7*3, 8*3, 9*3, 10*3, 11*3, 12*3, 13*3, 14*3, 15*3, 16*3, 17*3, 18*3, 19*3, 20*3, 21*3, 22*3, 23*3, 24*3, 25*3, 26*3, 27*3, 28*3, 29*3, 30*3, 31*3, 32*3, 33*3, 34*3, 35*3, 36*3, 37*3, 38*3, 39*3, 40*3, 41*3, 42*3, 43*3, 44*3, 45*3, 46*3, 47*3, 48*3, 49*3, 50*3, 51*3, 52*3, 53*3, 54*3, 55*3, 56*3, 57*3, 58*3, 59*3 };
@@ -359,8 +363,8 @@ protected:
 		data_t mask = FastPin<DATA_PIN>::mask();
 		uint8_t scale_base = 0;
 
-		uint8_t last_offset = 59;
 		int8_t this_offset = _data_offset[0];
+		uint16_t offset_count = size_t(_data_offset);
 
 		// register uint8_t *end = data + nLeds;
 		data_t hi = *port | mask;
@@ -381,12 +385,12 @@ protected:
 
 		// data = data_base + (data_offset[count-1]*advanceBy);
 		data = data_base;
+
 		if(this_offset < 0) {
 			data -= ((uint8_t)this_offset*3);
 		} else {
 			data += ((uint8_t)this_offset*3);
 		}
-		data_offset+=1;
 
 		uint8_t s0 = pixels.mScale.raw[RO(0)];
 		uint8_t s1 = pixels.mScale.raw[RO(1)];
@@ -400,6 +404,15 @@ protected:
 		uint8_t e0 = pixels.e[RO(0)];
 		uint8_t e1 = pixels.e[RO(1)];
 		uint8_t e2 = pixels.e[RO(2)];
+
+		//save starting data_offset into r25:r26 as offset_base
+		asm __volatile__(
+			// ""
+			"\tmovw r24, r26\n"
+			ASM_VARS
+		);
+
+		data_offset+=1;
 
 		uint8_t loopvar=0;
 
@@ -455,6 +468,10 @@ protected:
 
 				asm __volatile__(
 					"\tld %[this_offset], X+\n"
+					"\tcp  %A[offset_overflow], r26\n"
+					"\tcpc %B[offset_overflow], r27\n"
+					"\tbrne .+2\n"
+					"\tmovw r26, r24\n"
 					ASM_VARS
 				);
 
