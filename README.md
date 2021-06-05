@@ -1,3 +1,5 @@
+**THIS FORK FROM STACKOVERFLOW USER BENXO ALLOWS PARALLEL USAGE OF ADAFRUIT NEOPIXEL RINGS AND STRIPS**
+
 [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/FastLED/public)
 [![arduino-library-badge](https://www.ardu-badge.com/badge/FastLED.svg)](https://www.ardu-badge.com/FastLED)
 ![build status](https://github.com/FastLED/FastLED/workflows/build/badge.svg)
